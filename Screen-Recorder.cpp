@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 #include <atomic>
-
+//will create different versions later
 #ifdef _WIN32
     #include <windows.h>
     #include <gdiplus.h>
