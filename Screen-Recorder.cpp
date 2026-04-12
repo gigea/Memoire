@@ -216,7 +216,7 @@ void on_stop_clicked(GtkWidget *widget, gpointer data) {
 }
 }
 #endif
-
+//linux version and windows version seperation
 int main(int argc, char *argv[]) {
 #ifndef _WIN32
     gtk_init(&argc, &argv);
@@ -237,7 +237,7 @@ int main(int argc, char *argv[]) {
     gtk_box_pack_start(GTK_BOX(vbox), stop_button, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), status_label, TRUE, TRUE, 0);
 
-    ScreenRecorder recorder(1920, 1080, 30, "output.mp4");
+    ScreenRecorder recorder(0, 0, 30, "output.mp4");
 
     g_signal_connect(start_button, "clicked", G_CALLBACK(on_start_clicked), &recorder);
     g_signal_connect(stop_button, "clicked", G_CALLBACK(on_stop_clicked), &recorder);
@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
     gtk_widget_show_all(window);
     gtk_main();
 #else
-    ScreenRecorder recorder(1920, 1080, 30, "output.mp4");
+    ScreenRecorder recorder(0, 0, 30, "output.mp4");
     recorder.startRecording();
     // For Windows, perhaps add a console menu or something, but for now, just start
 #endif
