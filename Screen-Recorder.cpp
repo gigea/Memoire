@@ -5,6 +5,7 @@
 #include <thread>
 #include <vector>
 #include <atomic>
+
 //will create different versions later
 #ifdef _WIN32
     #include <windows.h>
@@ -13,6 +14,7 @@
 #else
     #include <X11/Xlib.h>
     #include <X11/Xutil.h>
+    #include <X11/extensions/Xrandr.h>
     #include <gtk/gtk.h>
 #endif
 
@@ -59,6 +61,42 @@ void saveBMP(const std::string& filename, int width, int height, const unsigned 
     }
 }
 
+// Get screen refresh rate
+#ifdef _WIN32
+int getScreenRefreshRate() {
+    DEVMODE devMode;
+    ZeroMemory(&devMode, sizeof(devMode));
+    devMode.dmSize = sizeof(devMode);
+
+    if (EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &devMode)) {
+        return devMode.dmDisplayFrequency > 0 ? devMode.dmDisplayFrequency : 60;
+    }
+    return 60; // default
+}
+#else
+int getScreenRefreshRate() {
+    Display* display = XOpenDisplay(NULL);
+    if (!display) return 60; // default
+
+    int screen = DefaultScreen(display);
+    int refreshRate = 60; // default
+
+    XRRScreenConfiguration *config = XRRGetScreenInfo(display, RootWindow(display, screen));
+    if (config) {
+        Rotation rotation;
+        SizeID sizeID = XRRConfigCurrentConfiguration(config, &rotation);
+        short *rates = XRRConfigRates(config, sizeID, &refreshRate);
+        if (rates && refreshRate > 0) {
+            refreshRate = rates[0];
+        }
+        XRRFreeScreenConfigInfo(config);
+    }
+
+    XCloseDisplay(display);
+    return refreshRate > 0 ? refreshRate : 60;
+}
+#endif
+
 class ScreenRecorder {
 private:
     int width, height, fps;
@@ -94,7 +132,7 @@ public:
     ~ScreenRecorder() {
         stopRecording();
     }
-
+ 
 private:
 #ifdef _WIN32
     void recordWindows() {
@@ -237,7 +275,8 @@ int main(int argc, char *argv[]) {
     gtk_box_pack_start(GTK_BOX(vbox), stop_button, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(vbox), status_label, TRUE, TRUE, 0);
 
-    ScreenRecorder recorder(0, 0, 30, "output.mp4");
+    int detectedFps = getScreenRefreshRate();
+    ScreenRecorder recorder(0, 0, detectedFps, "output.mp4");
 
     g_signal_connect(start_button, "clicked", G_CALLBACK(on_start_clicked), &recorder);
     g_signal_connect(stop_button, "clicked", G_CALLBACK(on_stop_clicked), &recorder);
@@ -245,7 +284,8 @@ int main(int argc, char *argv[]) {
     gtk_widget_show_all(window);
     gtk_main();
 #else
-    ScreenRecorder recorder(0, 0, 30, "output.mp4");
+    int detectedFps = getScreenRefreshRate();
+    ScreenRecorder recorder(0, 0, detectedFps, "output.mp4");
     recorder.startRecording();
     // For Windows, perhaps add a console menu or something, but for now, just start
 #endif
